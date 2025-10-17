@@ -1,12 +1,12 @@
 import { IncomingMessage, request, ServerResponse } from "http";
 import { getSongById, getSongs, addSong } from "../controllers/Songs";
+import { error } from "console";
+import { title } from "process";
 
 //http://localhost:3000/songs - songs endpoint
 //check if incoming request start with the songs endpoint
 export const songsRoute = async (req: IncomingMessage, res: ServerResponse) => {
   if (req.url?.startsWith("/songs")) {
-    console.log(req.url, " url");
-
     const parts = req.url.split("/");
     console.log(parts, "url parts");
 
@@ -19,9 +19,20 @@ export const songsRoute = async (req: IncomingMessage, res: ServerResponse) => {
     }
 
     if (req.method === "GET" && id) {
+
+      if (isNaN(id)) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid song id" }));
+        return;
+      }
       const song = getSongById(id);
-      res.writeHead(song ? 200 : 404, { "content-type": "applicaton/json" });
-      res.end(JSON.stringify(song || { message: "Not found" }));
+      if (!song) {
+        res.writeHead(404, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "Song not found" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(song));
       return;
     }
 
@@ -30,16 +41,37 @@ export const songsRoute = async (req: IncomingMessage, res: ServerResponse) => {
       req.on("data", (chunk) => {
         console.log(chunk, "chunk");
         body += chunk.toString();
-        console.log(body, "body");
       });
 
       req.on("end", () => {
-        const { title, artist, duration } = JSON.parse(body);
-        const newSong = addSong(title,artist, duration);
-        res.writeHead(201, {"content-type":"application/json"})
-        res.end(JSON.stringify(newSong));
+        try {
+          const { title, artist, duration } = JSON.parse(body);
+          if (!title || typeof title !== "string") {
+            res.writeHead(400, { "content-type": "application/lson" });
+            res.end(JSON.stringify({ error: "Song title is required" }));
+          }
+
+          if (!artist || typeof artist !== "string") {
+            res.writeHead(400, { "content-type": "application/lson" });
+            res.end(JSON.stringify({ error: "Song artist is required" }));
+          }
+
+          if (!duration || typeof duration !== "number") {
+            res.writeHead(400, { "content-type": "application/lson" });
+            res.end(JSON.stringify({ error: "Song duration is required" }));
+          }
+
+          const newSong = addSong(title, artist, duration);
+          res.writeHead(201, { "content-type": "application/json" });
+          res.end(JSON.stringify(newSong));
+        } catch (error) {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON payload" }));
+        }
       });
       return;
-    } 
+    }
+    res.writeHead(405, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "Method not allowed on /songs" }));
   }
 };
