@@ -1,8 +1,8 @@
 import { title } from "process";
-import { Song } from "../types/songs";
+import { Song } from "../types/Songs";
 
-let songs: Song[] = []; //type annotaion(only the song with the Song structure can be added)
-let currentId = 0;
+let songs: Song[] = []; //type annotation(only the song with the Song structure can be added)
+let currentId = 1;
 
 //CRUD operations
 
